@@ -1,0 +1,4 @@
+[submodule "ca-bifpn"]
+	path = ca-bifpn
+	url = git@github.com:camilo-nunez/ca-bifpn.git
+	branch = grn-block
