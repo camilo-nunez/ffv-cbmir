@@ -61,6 +61,58 @@ class FixedConvTranspose2d(nn.Module):
     
 class BaseVAE(nn.Module):
     
+#     def __init__(self,
+#                  in_channels: int,
+#                  in_shape: tuple[int, int],
+#                  latent_dim: int,
+#                 ):
+#         super().__init__()
+        
+#         vars1 = (3,2,1,1)
+#         inner_shapes_1 = calc_conv_return_shape(in_shape,*vars1)
+#         inner_shapes_2 = calc_conv_return_shape(inner_shapes_1,*vars1)
+        
+#         # Encoder Definition
+#         self.encoder = nn.Sequential(OrderedDict([('block1',
+#                                                     nn.Sequential(OrderedDict([('conv1', nn.Conv2d(in_channels, 512, kernel_size=3,  stride=2, padding=1, groups=in_channels, bias=False)),
+#                                                                                ('norm1', nn.InstanceNorm2d(512, affine=True)),
+#                                                                                ('pwconv1', nn.Conv2d(512, 512, kernel_size=1)),
+#                                                                                ('act1', nn.GELU()),
+#                                                                               ]))
+#                                                   ),
+#                                                   ('block2',
+#                                                    nn.Sequential(OrderedDict([('conv1', nn.Conv2d(512, 512, kernel_size=3,  stride=2, padding=1, groups=512, bias=False)),
+#                                                                               ('norm1', nn.InstanceNorm2d(512, affine=True)),
+#                                                                               ('pwconv1', nn.Conv2d(512, 512, kernel_size=1)),
+#                                                                               ('act1', nn.GELU()),
+#                                                                              ]))
+#                                                   )
+#                                                  ]))
+#         self.flatten = nn.Flatten(start_dim=1)
+        
+#         # Factorized Gaussian Posteriors Definition
+#         self.lin1_mu = nn.Linear(512*inner_shapes_2[0]*inner_shapes_2[1], latent_dim)
+#         self.lin1_log_sigma = nn.Linear(512*inner_shapes_2[0]*inner_shapes_2[1], latent_dim)
+
+#         # Decoder Definition
+#         self.lin1_decoder = nn.Linear(latent_dim, 512*inner_shapes_2[0]*inner_shapes_2[1])
+#         self.unflatten = nn.Unflatten(1, torch.Size([512, inner_shapes_2[0], inner_shapes_2[1]]))
+#         self.decoder = nn.Sequential(OrderedDict([('block1',
+#                                                     nn.Sequential(OrderedDict([('tconv1', FixedConvTranspose2d(nn.ConvTranspose2d(512, 512, kernel_size=3,  stride=2, padding=1, groups=512, bias=False), output_size=inner_shapes_1)),
+#                                                                                ('norm1', nn.InstanceNorm2d(512, affine=True)),
+#                                                                                ('pwconv1', nn.Conv2d(512, 512, kernel_size=1)),
+#                                                                                ('act1', nn.GELU()),
+#                                                                               ]))
+#                                                   ),
+#                                                   ('block2',
+#                                                    nn.Sequential(OrderedDict([('tconv1', FixedConvTranspose2d(nn.ConvTranspose2d(512, in_channels, kernel_size=3,  stride=2, padding=1, groups=in_channels, bias=False), output_size=in_shape)),
+#                                                                               ('norm1', nn.InstanceNorm2d(in_channels, affine=True)),
+#                                                                               ('pwconv1', nn.Conv2d(in_channels, in_channels, kernel_size=1)),
+# #                                                                               ('act1', nn.GELU()),
+#                                                                               ('act1', nn.Tanh()),
+#                                                                              ]))
+#                                                   )
+#                                                  ]))
     def __init__(self,
                  in_channels: int,
                  in_shape: tuple[int, int],
@@ -71,16 +123,24 @@ class BaseVAE(nn.Module):
         vars1 = (3,2,1,1)
         inner_shapes_1 = calc_conv_return_shape(in_shape,*vars1)
         inner_shapes_2 = calc_conv_return_shape(inner_shapes_1,*vars1)
+        inner_shapes_3 = calc_conv_return_shape(inner_shapes_2,*vars1)
         
         # Encoder Definition
         self.encoder = nn.Sequential(OrderedDict([('block1',
-                                                    nn.Sequential(OrderedDict([('conv1', nn.Conv2d(in_channels, 512, kernel_size=3,  stride=2, padding=1, groups=in_channels, bias=False)),
-                                                                               ('norm1', nn.InstanceNorm2d(512, affine=True)),
-                                                                               ('pwconv1', nn.Conv2d(512, 512, kernel_size=1)),
+                                                    nn.Sequential(OrderedDict([('conv1', nn.Conv2d(in_channels, in_channels, kernel_size=3,  stride=2, padding=1, groups=in_channels, bias=False)),
+                                                                               ('norm1', nn.InstanceNorm2d(in_channels, affine=True)),
+                                                                               ('pwconv1', nn.Conv2d(in_channels, in_channels, kernel_size=1)),
                                                                                ('act1', nn.GELU()),
                                                                               ]))
                                                   ),
                                                   ('block2',
+                                                   nn.Sequential(OrderedDict([('conv1', nn.Conv2d(in_channels, 512, kernel_size=3,  stride=2, padding=1, groups=in_channels, bias=False)),
+                                                                              ('norm1', nn.InstanceNorm2d(512, affine=True)),
+                                                                              ('pwconv1', nn.Conv2d(512, 512, kernel_size=1)),
+                                                                              ('act1', nn.GELU()),
+                                                                             ]))
+                                                  ),
+                                                  ('block3',
                                                    nn.Sequential(OrderedDict([('conv1', nn.Conv2d(512, 512, kernel_size=3,  stride=2, padding=1, groups=512, bias=False)),
                                                                               ('norm1', nn.InstanceNorm2d(512, affine=True)),
                                                                               ('pwconv1', nn.Conv2d(512, 512, kernel_size=1)),
@@ -91,21 +151,29 @@ class BaseVAE(nn.Module):
         self.flatten = nn.Flatten(start_dim=1)
         
         # Factorized Gaussian Posteriors Definition
-        self.lin1_mu = nn.Linear(512*inner_shapes_2[0]*inner_shapes_2[1], latent_dim)
-        self.lin1_log_sigma = nn.Linear(512*inner_shapes_2[0]*inner_shapes_2[1], latent_dim)
+        self.lin1_mu = nn.Linear(512*inner_shapes_3[0]*inner_shapes_3[1], latent_dim)
+        self.lin1_log_sigma = nn.Linear(512*inner_shapes_3[0]*inner_shapes_3[1], latent_dim)
 
         # Decoder Definition
-        self.lin1_decoder = nn.Linear(latent_dim, 512*inner_shapes_2[0]*inner_shapes_2[1])
-        self.unflatten = nn.Unflatten(1, torch.Size([512, inner_shapes_2[0], inner_shapes_2[1]]))
+        self.lin1_decoder = nn.Linear(latent_dim, 512*inner_shapes_3[0]*inner_shapes_3[1])
+        self.unflatten = nn.Unflatten(1, torch.Size([512, inner_shapes_3[0], inner_shapes_3[1]]))
         self.decoder = nn.Sequential(OrderedDict([('block1',
-                                                    nn.Sequential(OrderedDict([('tconv1', FixedConvTranspose2d(nn.ConvTranspose2d(512, 512, kernel_size=3,  stride=2, padding=1, groups=512, bias=False), output_size=inner_shapes_1)),
+                                                    nn.Sequential(OrderedDict([('tconv1', FixedConvTranspose2d(nn.ConvTranspose2d(512, 512, kernel_size=3,  stride=2, padding=1, groups=512, bias=False), output_size=inner_shapes_2)),
                                                                                ('norm1', nn.InstanceNorm2d(512, affine=True)),
                                                                                ('pwconv1', nn.Conv2d(512, 512, kernel_size=1)),
                                                                                ('act1', nn.GELU()),
                                                                               ]))
                                                   ),
                                                   ('block2',
-                                                   nn.Sequential(OrderedDict([('tconv1', FixedConvTranspose2d(nn.ConvTranspose2d(512, in_channels, kernel_size=3,  stride=2, padding=1, groups=in_channels, bias=False), output_size=in_shape)),
+                                                   nn.Sequential(OrderedDict([('tconv1', FixedConvTranspose2d(nn.ConvTranspose2d(512, in_channels, kernel_size=3,  stride=2, padding=1, groups=in_channels, bias=False), output_size=inner_shapes_1)),
+                                                                              ('norm1', nn.InstanceNorm2d(in_channels, affine=True)),
+                                                                              ('pwconv1', nn.Conv2d(in_channels, in_channels, kernel_size=1)),
+                                                                              ('act1', nn.GELU()),
+#                                                                               ('act1', nn.Tanh()),
+                                                                             ]))
+                                                  ),
+                                                  ('block3',
+                                                   nn.Sequential(OrderedDict([('tconv1', FixedConvTranspose2d(nn.ConvTranspose2d(in_channels, in_channels, kernel_size=3,  stride=2, padding=1, groups=in_channels, bias=False), output_size=in_shape)),
                                                                               ('norm1', nn.InstanceNorm2d(in_channels, affine=True)),
                                                                               ('pwconv1', nn.Conv2d(in_channels, in_channels, kernel_size=1)),
 #                                                                               ('act1', nn.GELU()),
