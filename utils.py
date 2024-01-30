@@ -9,7 +9,7 @@ from omegaconf import OmegaConf
 from cabifpn.config.init import default_config
 from cabifpn.model.builder import BackboneNeck
 
-# AUX Fuctions
+#################### AUX Fuctions ####################
 def _create_model(base_config, checkpoint):
         # Create the backbone and neck model
         print(f'[i+] Configuring backbone and neck models with variables: {base_config.MODEL}')
