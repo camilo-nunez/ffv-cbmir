@@ -253,11 +253,6 @@ if __name__ == '__main__':
     best_loss = 1e5
     global_steps = 0
     
-    ## Scheduler
-    if args.scheduler:
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=2, T_mult=2, eta_min= 1e-3)
-        print("[+] Using \'CosineAnnealingWarmRestarts\' ")
-    
     ## Prepare Automatic Mixed Precision
     if args.amp:
         print("[+] Using Automatic Mixed Precision")
@@ -271,12 +266,28 @@ if __name__ == '__main__':
         print('[+] Loading checkpoint...')
         checkpoint = torch.load(os.path.join(args.checkpoint))
         
-        base_model.load_state_dict(checkpoint['model_state_dict'])
+        match_k = base_model.load_state_dict(checkpoint['model_state_dict'])
+        print('[+] Loaded weights.',match_k)
+        
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        print('[+] Loaded optimizer.')
+        
+#         if args.scheduler and checkpoint['scheduler_state_dict']:
+#             match_s = scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+#             print('[+] Loaded scheduler.', match_s)
 
         best_loss = checkpoint['best_loss']
         start_epoch = checkpoint['epoch'] + 1
         print(f'[+] Ready. start_epoch: {start_epoch} - best_loss: {best_loss}')
 
+    ## Scheduler
+    if args.scheduler:
+        if args.checkpoint:
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=2, T_mult=2, eta_min= 1e-3, last_epoch=start_epoch)
+        else:
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=2, T_mult=2, eta_min= 1e-3, last_epoch=-1)
+        print("[+] Using \'CosineAnnealingWarmRestarts\' ")
+        
     ## Define the loss fuction
     if args.criterion=='mse':
         criterion_loss = nn.MSELoss()
@@ -360,6 +371,8 @@ if __name__ == '__main__':
                 tepoch.set_description(description_s)
                 
                 ## to board
+                writer.add_scalar('learning_rate', current_lr, global_steps)
+                
                 writer.add_scalar('Loss/median_loss', loss_median, global_steps)
                 for i, vae_dict in enumerate(layer_losses):
                     writer.add_scalar(f'Loss/recons_l{i}', vae_dict['reconstruction_loss'], global_steps)
